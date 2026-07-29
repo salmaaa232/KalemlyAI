@@ -8,7 +8,7 @@
 | ---------------- | ------------------------------------ |
 | Full Name        | Salma                                |
 | Project Name     | **KalemlyAI**                        |
-| GitHub Username  |                                      |
+| GitHub Username  | salmaaa232                           |
 | Challenge Batch  | June–July 2026                       |
 | Training Program | Large Language Models (LLMs) Program |
 | Organization     | [**Edrak for Ai**](https://edrak4ai.com/en)                         |
