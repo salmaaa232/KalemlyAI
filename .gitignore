@@ -1,0 +1,33 @@
+# Environment Variables
+.env
+.env*.local
+
+# Node.js / Next.js
+node_modules/
+.next/
+out/
+build/
+dist/
+
+# Python / Virtual Environment
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+
+# Databases & Vector Storage & Uploads
+*.db
+*.sqlite
+*.sqlite3
+backend/chroma_db/
+backend/uploads/
+chroma_db/
+uploads/
+
+# IDE / System
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

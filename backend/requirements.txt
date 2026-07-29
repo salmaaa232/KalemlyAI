@@ -1,0 +1,26 @@
+fastapi>=0.110.0
+uvicorn>=0.28.0
+pydantic>=2.6.0
+python-multipart>=0.0.9
+# LangChain core
+langchain>=0.1.12
+langchain-community>=0.0.28
+langchain-core>=0.1.32
+langchain-groq>=0.1.0
+langchain-text-splitters>=0.0.1
+# Vector store (non-deprecated)
+langchain-chroma>=1.0.0
+chromadb>=0.4.24
+# Embeddings (non-deprecated)
+langchain-huggingface>=0.0.1
+sentence-transformers>=2.5.1
+# Document parsing
+pypdf>=4.1.0
+python-docx>=1.1.0
+# HTTP & utilities
+requests>=2.31.0
+beautifulsoup4>=4.12.3
+python-dotenv>=1.0.1
+# Auth
+python-jose[cryptography]>=3.3.0
+bcrypt>=4.0.0

@@ -1,0 +1,10 @@
+{
+  "name": "kalemlyai-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix kalemlyai run dev",
+    "build": "npm --prefix kalemlyai run build",
+    "backend": "cd backend && venv\\Scripts\\python -m uvicorn main:app --reload --port 8000"
+  }
+}
