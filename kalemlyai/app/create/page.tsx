@@ -21,8 +21,14 @@ import {
   Headphones,
   Loader2,
   ExternalLink,
+  Palette,
+  Sun,
+  Moon,
+  MessageSquare,
+  User,
 } from "lucide-react";
 import { API_BASE_URL } from "@/lib/utils";
+import EscalationCard from "@/components/EscalationCard";
 
 export default function CreateChatbotPage() {
   const [step, setStep] = useState(1);
@@ -32,6 +38,13 @@ export default function CreateChatbotPage() {
   const [chatbotName, setChatbotName] = useState("Acme Support Bot");
   const [businessDescription, setBusinessDescription] = useState(
     "Acme Corp provides premium SaaS e-commerce solutions for online stores."
+  );
+
+  // Customization State
+  const [themeMode, setThemeMode] = useState<"dark" | "light">("dark");
+  const [primaryColor, setPrimaryColor] = useState("#253745");
+  const [welcomeMessage, setWelcomeMessage] = useState(
+    "Hello! Welcome to Acme Support. How can I assist you today?"
   );
 
   // Preset & Custom Instructions
@@ -71,6 +84,16 @@ export default function CreateChatbotPage() {
     "Your Assistant is Ready!",
   ];
 
+  const colorPresets = [
+    { name: "Navy Slate", hex: "#253745" },
+    { name: "Royal Indigo", hex: "#4f46e5" },
+    { name: "Emerald Green", hex: "#10b981" },
+    { name: "Cyan Blue", hex: "#0284c7" },
+    { name: "Deep Violet", hex: "#8b5cf6" },
+    { name: "Rose Crimson", hex: "#f43f5e" },
+    { name: "Warm Amber", hex: "#f59e0b" },
+  ];
+
   const handleAddInstruction = () => {
     if (customInstructionInput.trim()) {
       setInstructions([...instructions, customInstructionInput.trim()]);
@@ -107,7 +130,6 @@ export default function CreateChatbotPage() {
     setIsCreating(true);
     setCreationStage(0);
 
-    // Multi-stage animated sequence simulation
     for (let i = 0; i < creationStages.length - 1; i++) {
       await new Promise((resolve) => setTimeout(resolve, 800));
       setCreationStage(i + 1);
@@ -123,6 +145,9 @@ export default function CreateChatbotPage() {
       formData.append("support_phone", supportPhone);
       formData.append("whatsapp_number", whatsappNumber);
       formData.append("working_hours", working_hours);
+      formData.append("theme_mode", themeMode);
+      formData.append("primary_color", primaryColor);
+      formData.append("welcome_message", welcomeMessage);
       formData.append("urls", JSON.stringify(urls));
 
       files.forEach((f) => {
@@ -150,7 +175,7 @@ export default function CreateChatbotPage() {
       confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
     } finally {
       setIsCreating(false);
-      setStep(5);
+      setStep(6);
     }
   };
 
@@ -166,19 +191,20 @@ export default function CreateChatbotPage() {
             <Sparkles className="w-3.5 h-3.5 text-[#9ba8ab]" /> KalemlyAI Builder Wizard
           </div>
           <h1 className="text-3xl font-extrabold text-[#ccd0cf]">Create Your AI Support Chatbot</h1>
-          <p className="text-xs text-[#9ba8ab]">Follow the steps below to train your custom AI assistant.</p>
+          <p className="text-xs text-[#9ba8ab]">Follow the steps below to train and style your custom AI assistant.</p>
 
           {/* Stepper bar */}
-          <div className="flex items-center justify-between max-w-xl mx-auto pt-6">
+          <div className="flex items-center justify-between max-w-2xl mx-auto pt-6">
             {[
               { num: 1, label: "Basic Info" },
               { num: 2, label: "Instructions" },
               { num: 3, label: "Human Support" },
-              { num: 4, label: "Knowledge Base" },
+              { num: 4, label: "Appearance" },
+              { num: 5, label: "Knowledge Base" },
             ].map((s) => (
               <div key={s.num} className="flex flex-col items-center gap-1 z-10">
                 <div
-                  className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-colors ${
+                  className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-colors ${
                     step >= s.num
                       ? "bg-[#253745] text-[#ccd0cf] border border-[#4a5c6a] shadow-xs"
                       : "bg-[#11212d] border border-[#253745] text-[#4a5c6a]"
@@ -186,7 +212,7 @@ export default function CreateChatbotPage() {
                 >
                   {step > s.num ? <CheckCircle2 className="w-4 h-4 text-[#ccd0cf]" /> : s.num}
                 </div>
-                <span className="text-[11px] text-[#9ba8ab] font-medium">{s.label}</span>
+                <span className="text-[10px] text-[#9ba8ab] font-medium">{s.label}</span>
               </div>
             ))}
           </div>
@@ -437,14 +463,195 @@ export default function CreateChatbotPage() {
                     onClick={() => setStep(4)}
                     className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#253745] hover:bg-[#4a5c6a] text-[#ccd0cf] border border-[#4a5c6a] font-medium text-xs shadow-xs transition-colors"
                   >
+                    Next: Appearance & Styling <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 4: APPEARANCE & CUSTOMIZATION */}
+            {step === 4 && (
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 border-b border-[#253745] pb-4">
+                  <div className="p-2.5 rounded-xl bg-[#253745] border border-[#4a5c6a] text-[#ccd0cf]">
+                    <Palette className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-[#ccd0cf]">Chatbot Appearance & Customization</h3>
+                    <p className="text-xs text-[#9ba8ab]">Customize colors, light/dark mode, and greeting message to match your brand.</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Left Column: Customization Controls */}
+                  <div className="space-y-5">
+                    {/* Theme Mode Toggle */}
+                    <div>
+                      <label className="block text-xs font-semibold text-[#ccd0cf] mb-2">Theme Mode</label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setThemeMode("dark")}
+                          className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-xs font-semibold transition-all ${
+                            themeMode === "dark"
+                              ? "bg-[#253745] border-[#4a5c6a] text-[#ccd0cf] shadow-xs"
+                              : "bg-[#06141b] border-[#253745] text-[#9ba8ab] hover:text-[#ccd0cf]"
+                          }`}
+                        >
+                          <Moon className="w-4 h-4" /> Dark Mode
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setThemeMode("light")}
+                          className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-xs font-semibold transition-all ${
+                            themeMode === "light"
+                              ? "bg-slate-100 border-slate-300 text-slate-900 shadow-xs"
+                              : "bg-[#06141b] border-[#253745] text-[#9ba8ab] hover:text-[#ccd0cf]"
+                          }`}
+                        >
+                          <Sun className="w-4 h-4" /> Light Mode
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Primary Accent Color */}
+                    <div>
+                      <label className="block text-xs font-semibold text-[#ccd0cf] mb-2">Primary Brand Color</label>
+                      <div className="flex flex-wrap gap-2.5 mb-3">
+                        {colorPresets.map((preset) => (
+                          <button
+                            key={preset.hex}
+                            type="button"
+                            onClick={() => setPrimaryColor(preset.hex)}
+                            style={{ backgroundColor: preset.hex }}
+                            className={`w-7 h-7 rounded-full border-2 transition-transform hover:scale-110 ${
+                              primaryColor.toLowerCase() === preset.hex.toLowerCase()
+                                ? "border-white scale-110 shadow-md"
+                                : "border-transparent opacity-80 hover:opacity-100"
+                            }`}
+                            title={preset.name}
+                          />
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={primaryColor}
+                          onChange={(e) => setPrimaryColor(e.target.value)}
+                          className="w-9 h-9 rounded-xl border border-[#253745] bg-[#06141b] cursor-pointer p-0.5"
+                        />
+                        <input
+                          type="text"
+                          value={primaryColor}
+                          onChange={(e) => setPrimaryColor(e.target.value)}
+                          placeholder="#253745"
+                          className="flex-1 px-3.5 py-2 rounded-xl bg-[#06141b] border border-[#253745] text-xs text-[#ccd0cf] font-mono focus:outline-none focus:border-[#4a5c6a]"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Welcome Message */}
+                    <div>
+                      <label className="block text-xs font-semibold text-[#ccd0cf] mb-1">Custom Welcome Message</label>
+                      <textarea
+                        rows={3}
+                        value={welcomeMessage}
+                        onChange={(e) => setWelcomeMessage(e.target.value)}
+                        placeholder="Hello! Welcome to our support. How can I assist you today?"
+                        className="w-full px-4 py-2.5 rounded-xl bg-[#06141b] border border-[#253745] text-xs text-[#ccd0cf] placeholder-[#4a5c6a] focus:outline-none focus:border-[#4a5c6a] transition-all resize-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Right Column: Real-time Live Preview Box */}
+                  <div className="space-y-2">
+                    <label className="block text-xs font-semibold text-[#ccd0cf]">Real-Time Widget Preview</label>
+                    <div
+                      className={`p-4 rounded-3xl border shadow-xl space-y-3 text-xs transition-all ${
+                        themeMode === "light"
+                          ? "bg-white border-slate-200 text-slate-900"
+                          : "bg-[#11212d] border-[#253745] text-[#ccd0cf]"
+                      }`}
+                    >
+                      {/* Preview Header */}
+                      <div
+                        style={{ backgroundColor: primaryColor }}
+                        className="p-3 rounded-2xl text-white flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Bot className="w-4 h-4" />
+                          <span className="font-bold text-xs">{chatbotName}</span>
+                        </div>
+                        <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                      </div>
+
+                      {/* Preview Chat Bubble */}
+                      <div className="space-y-2 py-1">
+                        <div
+                          className={`p-3 rounded-2xl text-[11px] leading-relaxed border ${
+                            themeMode === "light"
+                              ? "bg-slate-100 text-slate-800 border-slate-200"
+                              : "bg-[#06141b] text-[#ccd0cf] border-[#253745]"
+                          }`}
+                        >
+                          {welcomeMessage}
+                        </div>
+
+                        <div className="flex justify-end">
+                          <div
+                            style={{ backgroundColor: primaryColor }}
+                            className="p-2.5 rounded-2xl text-[11px] text-white rounded-tr-none shadow-xs"
+                          >
+                            How can I reach human support?
+                          </div>
+                        </div>
+
+                        {/* Preview Escalation Card */}
+                        <EscalationCard
+                          chatbotId="preview"
+                          supportInfo={{
+                            support_email: supportEmail,
+                            support_phone: supportPhone,
+                            whatsapp_number: whatsappNumber,
+                            working_hours: working_hours,
+                          }}
+                          themeMode={themeMode}
+                          primaryColor={primaryColor}
+                        />
+                      </div>
+
+                      {/* Preview Floating Button */}
+                      <div className="flex justify-end pt-1">
+                        <div
+                          style={{ backgroundColor: primaryColor }}
+                          className="w-10 h-10 rounded-full text-white flex items-center justify-center shadow-lg"
+                        >
+                          <MessageSquare className="w-5 h-5" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-6 border-t border-[#253745]">
+                  <button
+                    onClick={() => setStep(3)}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#06141b] hover:bg-[#253745] text-[#ccd0cf] text-xs font-medium transition-colors"
+                  >
+                    <ArrowLeft className="w-4 h-4" /> Back
+                  </button>
+                  <button
+                    onClick={() => setStep(5)}
+                    className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#253745] hover:bg-[#4a5c6a] text-[#ccd0cf] border border-[#4a5c6a] font-medium text-xs shadow-xs transition-colors"
+                  >
                     Next: Knowledge Base <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
               </div>
             )}
 
-            {/* STEP 4: KNOWLEDGE BASE UPLOADER */}
-            {step === 4 && (
+            {/* STEP 5: KNOWLEDGE BASE UPLOADER */}
+            {step === 5 && (
               <div className="space-y-6">
                 <div className="flex items-center gap-3 border-b border-[#253745] pb-4">
                   <div className="p-2.5 rounded-xl bg-[#253745] border border-[#4a5c6a] text-[#ccd0cf]">
@@ -538,7 +745,7 @@ export default function CreateChatbotPage() {
 
                 <div className="flex items-center justify-between pt-6 border-t border-[#253745]">
                   <button
-                    onClick={() => setStep(3)}
+                    onClick={() => setStep(4)}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#06141b] hover:bg-[#253745] text-[#ccd0cf] text-xs font-medium transition-colors"
                   >
                     <ArrowLeft className="w-4 h-4" /> Back
@@ -553,8 +760,8 @@ export default function CreateChatbotPage() {
               </div>
             )}
 
-            {/* STEP 5: SUCCESS & SHARE / EMBED MODAL */}
-            {step === 5 && createdId && (
+            {/* STEP 6: SUCCESS & SHARE / EMBED MODAL */}
+            {step === 6 && createdId && (
               <div className="space-y-8 text-center py-4">
                 <div className="w-16 h-16 rounded-full bg-[#253745] text-[#ccd0cf] flex items-center justify-center mx-auto border border-[#4a5c6a] shadow-xs">
                   <CheckCircle2 className="w-10 h-10" />

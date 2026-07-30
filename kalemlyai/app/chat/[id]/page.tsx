@@ -26,6 +26,9 @@ interface ChatbotConfig {
     whatsapp_number?: string;
     working_hours: string;
   };
+  theme_mode?: "dark" | "light";
+  primary_color?: string;
+  welcome_message?: string;
 }
 
 interface Message {
@@ -78,11 +81,12 @@ export default function PublicChatPage() {
 
       if (loadedConfig) {
         setBotConfig(loadedConfig);
+        const welcome = loadedConfig.welcome_message || `Hello! Welcome to ${loadedConfig.company_name}. How can I assist you today?`;
         setMessages([
           {
             id: "welcome",
             sender: "bot",
-            text: `Hello! Welcome to ${loadedConfig.company_name}. How can I assist you today?`,
+            text: welcome,
           },
         ]);
       } else {
@@ -96,6 +100,9 @@ export default function PublicChatPage() {
             support_phone: "+1 (800) 555-0199",
             working_hours: "Mon-Fri 9AM - 6PM",
           },
+          theme_mode: "dark",
+          primary_color: "#253745",
+          welcome_message: "Hello! Welcome to customer support. How can I assist you today?",
         });
         setMessages([
           {
@@ -157,7 +164,6 @@ export default function PublicChatPage() {
       console.warn("Backend connection failed:", err);
     }
 
-    // Network / Offline Error Fallback
     setTimeout(() => {
       setMessages((prev) => [
         ...prev,
@@ -172,6 +178,9 @@ export default function PublicChatPage() {
       setIsThinking(false);
     }, 1000);
   };
+
+  const isLight = botConfig?.theme_mode === "light";
+  const primary = botConfig?.primary_color || "#253745";
 
   if (initialLoading) {
     return (
@@ -191,34 +200,49 @@ export default function PublicChatPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#06141b] text-[#ccd0cf] flex flex-col items-center justify-center p-2 sm:p-6">
-      <div className="w-full max-w-2xl h-[92vh] bg-[#11212d] rounded-3xl border border-[#253745] shadow-2xl flex flex-col overflow-hidden">
+    <div
+      className={`min-h-screen flex flex-col items-center justify-center p-2 sm:p-6 transition-colors ${
+        isLight ? "bg-slate-100 text-slate-900" : "bg-[#06141b] text-[#ccd0cf]"
+      }`}
+    >
+      <div
+        className={`w-full max-w-2xl h-[92vh] rounded-3xl border shadow-2xl flex flex-col overflow-hidden transition-colors ${
+          isLight ? "bg-white border-slate-200" : "bg-[#11212d] border-[#253745]"
+        }`}
+      >
         {/* Header */}
-        <div className="px-6 py-4 bg-[#06141b] border-b border-[#253745] flex items-center justify-between">
+        <div
+          style={{ backgroundColor: primary }}
+          className="px-6 py-4 flex items-center justify-between text-white shadow-xs"
+        >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#253745] border border-[#4a5c6a] flex items-center justify-center">
-              <Bot className="w-6 h-6 text-[#ccd0cf]" />
+            <div className="w-10 h-10 rounded-2xl bg-white/20 border border-white/20 flex items-center justify-center">
+              <Bot className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-[#ccd0cf] flex items-center gap-2">
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
                 {botConfig?.chatbot_name || "KalemlyAI Assistant"}
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
               </h2>
-              <p className="text-xs text-[#9ba8ab] flex items-center gap-1">
-                <Building2 className="w-3 h-3 text-[#4a5c6a]" /> {botConfig?.company_name || "Customer Support"}
+              <p className="text-xs text-white/80 flex items-center gap-1">
+                <Building2 className="w-3 h-3 text-white/70" /> {botConfig?.company_name || "Customer Support"}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-[11px] px-3 py-1 rounded-full bg-[#253745] text-[#ccd0cf] border border-[#4a5c6a] font-medium flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-[#ccd0cf]" /> Active RAG Support
+            <span className="text-[11px] px-3 py-1 rounded-full bg-white/10 text-white border border-white/20 font-medium flex items-center gap-1">
+              <ShieldCheck className="w-3.5 h-3.5 text-white" /> Active RAG Support
             </span>
           </div>
         </div>
 
         {/* Chat Messages */}
-        <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-[#06141b]/40">
+        <div
+          className={`flex-1 p-6 overflow-y-auto space-y-4 ${
+            isLight ? "bg-slate-50/60" : "bg-[#06141b]/40"
+          }`}
+        >
           {messages.map((msg) => (
             <div
               key={msg.id}
@@ -230,9 +254,12 @@ export default function PublicChatPage() {
                 }`}
               >
                 <div
+                  style={msg.sender === "user" ? { backgroundColor: primary } : {}}
                   className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold ${
                     msg.sender === "user"
-                      ? "bg-[#4a5c6a] text-[#ccd0cf]"
+                      ? "text-white"
+                      : isLight
+                      ? "bg-slate-200 text-slate-700"
                       : "bg-[#253745] text-[#9ba8ab]"
                   }`}
                 >
@@ -241,20 +268,24 @@ export default function PublicChatPage() {
 
                 <div className="flex flex-col gap-2 w-full">
                   <div
+                    style={msg.sender === "user" ? { backgroundColor: primary } : {}}
                     className={`p-4 rounded-2xl text-xs leading-relaxed border ${
                       msg.sender === "user"
-                        ? "bg-[#253745] text-[#ccd0cf] border-[#4a5c6a] rounded-tr-none"
+                        ? "text-white border-white/10 rounded-tr-none shadow-xs"
+                        : isLight
+                        ? "bg-white text-slate-900 border-slate-200 rounded-tl-none shadow-2xs"
                         : "bg-[#11212d] text-[#ccd0cf] border-[#253745] rounded-tl-none"
                     }`}
                   >
                     {msg.text}
                   </div>
 
-                  {/* HUMAN ESCALATION CARD */}
                   {msg.sender === "bot" && msg.needHumanSupport && (
                     <EscalationCard
                       chatbotId={chatbotId}
                       supportInfo={msg.supportInfo || botConfig?.support_info}
+                      themeMode={botConfig?.theme_mode || "dark"}
+                      primaryColor={primary}
                     />
                   )}
                 </div>
@@ -262,7 +293,6 @@ export default function PublicChatPage() {
             </div>
           ))}
 
-          {/* THINKING ANIMATION */}
           {isThinking && (
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-xl bg-[#253745] text-[#9ba8ab] flex items-center justify-center">
@@ -280,19 +310,26 @@ export default function PublicChatPage() {
             e.preventDefault();
             handleSend(input);
           }}
-          className="p-4 bg-[#11212d] border-t border-[#253745] flex items-center gap-3"
+          className={`p-4 border-t flex items-center gap-3 ${
+            isLight ? "bg-white border-slate-200" : "bg-[#11212d] border-[#253745]"
+          }`}
         >
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type your message..."
-            className="flex-1 px-4 py-3 rounded-2xl bg-[#06141b] border border-[#253745] text-xs text-[#ccd0cf] placeholder-[#4a5c6a] focus:outline-none focus:border-[#4a5c6a] transition-all"
+            className={`flex-1 px-4 py-3 rounded-2xl border text-xs focus:outline-none transition-all ${
+              isLight
+                ? "bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400 focus:bg-white"
+                : "bg-[#06141b] border-[#253745] text-[#ccd0cf] placeholder-[#4a5c6a]"
+            }`}
           />
           <button
             type="submit"
             disabled={isThinking || !input.trim()}
-            className="p-3 rounded-2xl bg-[#253745] hover:bg-[#4a5c6a] border border-[#4a5c6a] text-[#ccd0cf] font-medium transition-colors disabled:opacity-50"
+            style={{ backgroundColor: primary }}
+            className="p-3 rounded-2xl text-white font-medium transition-colors disabled:opacity-50 border border-white/10 shadow-xs hover:opacity-90"
           >
             {isThinking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
           </button>

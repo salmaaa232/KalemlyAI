@@ -114,6 +114,9 @@ async def create_chatbot_endpoint(
     support_phone: str = Form(""),
     whatsapp_number: Optional[str] = Form(""),
     working_hours: str = Form(""),
+    theme_mode: str = Form("dark"),
+    primary_color: str = Form("#253745"),
+    welcome_message: str = Form(""),
     urls: Optional[str] = Form("[]"),
     files: List[UploadFile] = File(default=[]),
     current_user: Optional[Dict] = Depends(get_current_user)
@@ -144,6 +147,9 @@ async def create_chatbot_endpoint(
             "support_phone": support_phone,
             "whatsapp_number": whatsapp_number or "",
             "working_hours": working_hours,
+            "theme_mode": theme_mode or "dark",
+            "primary_color": primary_color or "#253745",
+            "welcome_message": welcome_message or "",
             "doc_count": len(file_objs) + len(parsed_urls)
         }
 
@@ -184,6 +190,9 @@ def get_chatbot_endpoint(chatbot_id: str):
             "whatsapp_number": bot["whatsapp_number"],
             "working_hours": bot["working_hours"],
         },
+        "theme_mode": bot.get("theme_mode", "dark"),
+        "primary_color": bot.get("primary_color", "#253745"),
+        "welcome_message": bot.get("welcome_message", ""),
         "doc_count": bot["doc_count"],
         "created_at": bot["created_at"]
     }
@@ -199,6 +208,9 @@ async def update_chatbot_endpoint(
     support_phone: str = Form(""),
     whatsapp_number: Optional[str] = Form(""),
     working_hours: str = Form(""),
+    theme_mode: str = Form("dark"),
+    primary_color: str = Form("#253745"),
+    welcome_message: str = Form(""),
     urls: Optional[str] = Form("[]"),
     files: List[UploadFile] = File(default=[]),
     current_user: Dict = Depends(require_current_user)
@@ -234,7 +246,10 @@ async def update_chatbot_endpoint(
         "support_phone": support_phone or bot["support_phone"],
         "whatsapp_number": whatsapp_number or bot["whatsapp_number"],
         "working_hours": working_hours or bot["working_hours"],
-        "doc_count": len(file_objs) + len(parsed_urls)
+        "theme_mode": theme_mode or bot.get("theme_mode", "dark"),
+        "primary_color": primary_color or bot.get("primary_color", "#253745"),
+        "welcome_message": welcome_message if welcome_message is not None else bot.get("welcome_message", ""),
+        "doc_count": (bot.get("doc_count", 0) + len(file_objs) + len(parsed_urls))
     }
     update_chatbot(chatbot_id, data)
 

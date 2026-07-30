@@ -11,6 +11,8 @@
     container.style.bottom = '20px';
     container.style.right = '20px';
     container.style.zIndex = '9999999';
+    container.style.background = 'transparent';
+    container.style.pointerEvents = 'none';
 
     var host = window.location.origin;
     if (host.includes('localhost') || host.includes('127.0.0.1')) {
@@ -24,6 +26,7 @@
     iframe.style.border = 'none';
     iframe.style.background = 'transparent';
     iframe.style.colorScheme = 'normal';
+    iframe.style.pointerEvents = 'auto';
 
     container.appendChild(iframe);
     document.body.appendChild(container);

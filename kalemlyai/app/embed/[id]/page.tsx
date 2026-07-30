@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
-import { Bot, Send, X, MessageSquare, Loader2 } from "lucide-react";
+import { Bot, Send, X, MessageSquare, Loader2, Sparkles } from "lucide-react";
 import ThinkingAnimation from "@/components/ThinkingAnimation";
 import EscalationCard from "@/components/EscalationCard";
 import { API_BASE_URL } from "@/lib/utils";
@@ -12,6 +12,9 @@ interface ChatbotConfig {
   company_name: string;
   chatbot_name: string;
   support_info: any;
+  theme_mode?: "dark" | "light";
+  primary_color?: string;
+  welcome_message?: string;
 }
 
 interface Message {
@@ -54,25 +57,30 @@ export default function EmbedWidgetPage() {
 
       if (loadedConfig) {
         setBotConfig(loadedConfig);
+        const welcome = loadedConfig.welcome_message || `Hello! Welcome to ${loadedConfig.company_name}. How can I help you today?`;
         setMessages([
           {
             id: "welcome",
             sender: "bot",
-            text: `Hello! Welcome to ${loadedConfig.company_name}. How can I help you today?`,
+            text: welcome,
           },
         ]);
       } else {
-        setBotConfig({
+        const defaultConfig: ChatbotConfig = {
           id: chatbotId,
           company_name: "Customer Support",
           chatbot_name: "Kalemly Assistant",
           support_info: null,
-        });
+          theme_mode: "dark",
+          primary_color: "#253745",
+          welcome_message: "Hello! How can I assist you today?",
+        };
+        setBotConfig(defaultConfig);
         setMessages([
           {
             id: "welcome",
             sender: "bot",
-            text: "Hello! How can I assist you today?",
+            text: defaultConfig.welcome_message!,
           },
         ]);
       }
@@ -144,44 +152,63 @@ export default function EmbedWidgetPage() {
     }, 1000);
   };
 
+  const isLight = botConfig?.theme_mode === "light";
+  const primary = botConfig?.primary_color || "#253745";
+
   return (
-    <div className="fixed bottom-0 right-0 p-4 z-50 font-sans flex flex-col items-end">
+    <div className="fixed bottom-0 right-0 p-4 z-50 font-sans flex flex-col items-end bg-transparent pointer-events-none">
       {/* Floating Widget Drawer Window */}
       {isOpen && (
-        <div className="w-[370px] h-[560px] rounded-3xl bg-[#11212d] border border-[#253745] shadow-2xl flex flex-col overflow-hidden mb-4 animate-in slide-in-from-bottom-5 fade-in duration-300">
+        <div
+          className={`w-[370px] h-[560px] rounded-3xl border shadow-2xl flex flex-col overflow-hidden mb-4 pointer-events-auto animate-in slide-in-from-bottom-5 fade-in duration-300 transition-colors ${
+            isLight
+              ? "bg-white border-slate-200 text-slate-900"
+              : "bg-[#11212d] border-[#253745] text-[#ccd0cf]"
+          }`}
+        >
           {/* Widget Header */}
-          <div className="px-5 py-3.5 bg-[#06141b] border-b border-[#253745] flex items-center justify-between">
+          <div
+            style={{ backgroundColor: primary }}
+            className="px-5 py-3.5 flex items-center justify-between text-white shadow-xs"
+          >
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-[#253745] border border-[#4a5c6a] flex items-center justify-center">
-                <Bot className="w-4 h-4 text-[#ccd0cf]" />
+              <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center border border-white/20">
+                <Bot className="w-4 h-4 text-white" />
               </div>
               <div>
-                <h3 className="text-xs font-bold text-[#ccd0cf] flex items-center gap-1.5">
+                <h3 className="text-xs font-bold text-white flex items-center gap-1.5">
                   {botConfig?.chatbot_name || "Support Assistant"}
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
                 </h3>
-                <p className="text-[10px] text-[#9ba8ab]">{botConfig?.company_name}</p>
+                <p className="text-[10px] text-white/80">{botConfig?.company_name}</p>
               </div>
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="p-1.5 rounded-lg text-[#9ba8ab] hover:text-[#ccd0cf] hover:bg-[#253745] transition-colors"
+              className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Messages */}
-          <div className="flex-1 p-4 overflow-y-auto space-y-3 text-xs bg-[#06141b]/40">
+          <div
+            className={`flex-1 p-4 overflow-y-auto space-y-3 text-xs ${
+              isLight ? "bg-slate-50/60" : "bg-[#06141b]/50"
+            }`}
+          >
             {messages.map((msg) => (
               <div
                 key={msg.id}
                 className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}
               >
                 <div
+                  style={msg.sender === "user" ? { backgroundColor: primary } : {}}
                   className={`p-3 rounded-2xl max-w-[85%] leading-relaxed border ${
                     msg.sender === "user"
-                      ? "bg-[#253745] text-[#ccd0cf] border-[#4a5c6a] rounded-tr-none"
+                      ? "text-white border-white/10 rounded-tr-none shadow-xs"
+                      : isLight
+                      ? "bg-white text-slate-900 border-slate-200 rounded-tl-none shadow-2xs"
                       : "bg-[#11212d] text-[#ccd0cf] border-[#253745] rounded-tl-none"
                   }`}
                 >
@@ -192,6 +219,8 @@ export default function EmbedWidgetPage() {
                   <EscalationCard
                     chatbotId={chatbotId}
                     supportInfo={msg.supportInfo || botConfig?.support_info}
+                    themeMode={botConfig?.theme_mode || "dark"}
+                    primaryColor={primary}
                   />
                 )}
               </div>
@@ -211,19 +240,26 @@ export default function EmbedWidgetPage() {
               e.preventDefault();
               handleSend(input);
             }}
-            className="p-3 bg-[#11212d] border-t border-[#253745] flex items-center gap-2"
+            className={`p-3 border-t flex items-center gap-2 ${
+              isLight ? "bg-white border-slate-200" : "bg-[#11212d] border-[#253745]"
+            }`}
           >
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask a question..."
-              className="flex-1 px-3 py-2 rounded-xl bg-[#06141b] border border-[#253745] text-xs text-[#ccd0cf] placeholder-[#4a5c6a] focus:outline-none focus:border-[#4a5c6a] transition-all"
+              className={`flex-1 px-3 py-2 rounded-xl border text-xs focus:outline-none transition-all ${
+                isLight
+                  ? "bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400 focus:bg-white"
+                  : "bg-[#06141b] border-[#253745] text-[#ccd0cf] placeholder-[#4a5c6a]"
+              }`}
             />
             <button
               type="submit"
               disabled={isThinking || !input.trim()}
-              className="p-2.5 rounded-xl bg-[#253745] hover:bg-[#4a5c6a] text-[#ccd0cf] border border-[#4a5c6a] transition-colors"
+              style={{ backgroundColor: primary }}
+              className="p-2.5 rounded-xl text-white transition-colors disabled:opacity-50 border border-white/10 shadow-xs hover:opacity-90"
             >
               {isThinking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             </button>
@@ -234,7 +270,8 @@ export default function EmbedWidgetPage() {
       {/* Floating Launcher Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-14 h-14 rounded-full bg-[#253745] hover:bg-[#4a5c6a] text-[#ccd0cf] border border-[#4a5c6a] flex items-center justify-center shadow-xl hover:scale-105 transition-all"
+        style={{ backgroundColor: primary }}
+        className="w-14 h-14 rounded-full text-white border border-white/20 flex items-center justify-center shadow-xl hover:scale-105 transition-all pointer-events-auto cursor-pointer"
       >
         {isOpen ? <X className="w-6 h-6" /> : <MessageSquare className="w-6 h-6" />}
       </button>
