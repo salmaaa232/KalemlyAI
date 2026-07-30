@@ -1,10 +1,11 @@
 import sqlite3
 import json
 import uuid
+import os
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 
-DB_PATH = "kalemly.db"
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "kalemly.db")
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
@@ -71,12 +72,6 @@ def init_db():
             FOREIGN KEY (chatbot_id) REFERENCES chatbots (id)
         )
     """)
-
-    # Check if existing conversations table is from old flat message-based schema
-    cursor.execute("PRAGMA table_info(conversations)")
-    cols = [r[1] for r in cursor.fetchall()]
-    if "user_message" in cols:
-        cursor.execute("DROP TABLE conversations")
 
     # ── Conversations table (Grouped customer sessions) ──────────────────────────
     cursor.execute("""
@@ -278,3 +273,309 @@ def update_chatbot(chatbot_id: str, data: dict) -> bool:
     affected = cursor.rowcount
     conn.close()
     return affected > 0
+
+def delete_chatbot(chatbot_id: str) -> bool:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM chatbots WHERE id = ?", (chatbot_id,))
+    cursor.execute("DELETE FROM conversations WHERE chatbot_id = ?", (chatbot_id,))
+    conn.commit()
+    affected = cursor.rowcount
+    conn.close()
+    return affected > 0
+
+# ── Conversation & Messages CRUD ─────────────────────────────────────────────────
+
+def get_or_create_active_conversation(
+    chatbot_id: str,
+    session_id: str,
+    initial_user_message: str,
+    category: str = "general"
+) -> Dict[str, Any]:
+    """Finds an active conversation for (chatbot_id, session_id) active within 30 min, else creates a new one."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    now = datetime.utcnow()
+    now_iso = now.isoformat()
+
+    cursor.execute("""
+        SELECT * FROM conversations
+        WHERE chatbot_id = ? AND session_id = ?
+        ORDER BY updated_at DESC LIMIT 1
+    """, (chatbot_id, session_id))
+    row = cursor.fetchone()
+
+    if row:
+        conv = dict(row)
+        try:
+            last_time_str = conv.get("updated_at") or conv.get("started_at")
+            if last_time_str:
+                last_time = datetime.fromisoformat(last_time_str.replace("Z", ""))
+                diff_seconds = (now - last_time).total_seconds()
+                if diff_seconds < 1800:
+                    conn.close()
+                    return conv
+        except Exception as e:
+            print(f"Error parsing timestamp for session active check: {e}")
+
+    # Create NEW conversation
+    conv_id = f"conv_{str(uuid.uuid4())[:12]}"
+    title = f"{category.replace('_', ' ').title()} Inquiry"
+    summary = f"Customer inquired about: {initial_user_message[:60]}"
+
+    cursor.execute("""
+        INSERT INTO conversations (
+            id, chatbot_id, session_id, title, summary, category,
+            total_messages, confidence, need_escalation, started_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, 0, 0.0, 0, ?, ?)
+    """, (conv_id, chatbot_id, session_id, title, summary, category, now_iso, now_iso))
+
+    conn.commit()
+    cursor.execute("SELECT * FROM conversations WHERE id = ?", (conv_id,))
+    new_conv = dict(cursor.fetchone())
+    conn.close()
+    return new_conv
+
+def add_messages_to_conversation(
+    conversation_id: str,
+    user_msg: str,
+    bot_msg: str,
+    category: str = "general",
+    confidence: float = 0.0,
+    need_escalation: bool = False,
+    summary: Optional[str] = None,
+    title: Optional[str] = None
+):
+    """Appends user and bot messages to messages table and updates conversation metadata."""
+    conn = get_db()
+    cursor = conn.cursor()
+    now_iso = datetime.utcnow().isoformat()
+
+    # 1. Insert user message
+    user_msg_id = f"msg_{str(uuid.uuid4())[:12]}"
+    cursor.execute("""
+        INSERT INTO messages (id, conversation_id, sender, content, category, confidence, need_escalation, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (user_msg_id, conversation_id, "user", user_msg, category, confidence, 0, now_iso))
+
+    # 2. Insert bot response message
+    bot_msg_id = f"msg_{str(uuid.uuid4())[:12]}"
+    esc_flag = 1 if need_escalation else 0
+    cursor.execute("""
+        INSERT INTO messages (id, conversation_id, sender, content, category, confidence, need_escalation, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (bot_msg_id, conversation_id, "bot", bot_msg, category, confidence, esc_flag, now_iso))
+
+    # 3. Update parent conversation metadata
+    cursor.execute("SELECT total_messages, need_escalation, title, summary, category FROM conversations WHERE id = ?", (conversation_id,))
+    conv_row = cursor.fetchone()
+
+    current_count = conv_row["total_messages"] if conv_row and conv_row["total_messages"] is not None else 0
+    current_esc = conv_row["need_escalation"] if conv_row and conv_row["need_escalation"] is not None else 0
+
+    new_count = current_count + 2
+    new_esc = max(current_esc, esc_flag)
+
+    cat_to_save = category if category != "general" else (conv_row["category"] if conv_row and conv_row["category"] else "general")
+    update_title = title if title else (conv_row["title"] if conv_row and conv_row["title"] else f"{cat_to_save.replace('_', ' ').title()} Inquiry")
+    update_summary = summary if summary else (conv_row["summary"] if conv_row and conv_row["summary"] else f"Customer message: {user_msg[:60]}")
+
+    cursor.execute("""
+        UPDATE conversations SET
+            total_messages = ?,
+            need_escalation = ?,
+            category = ?,
+            confidence = ?,
+            updated_at = ?,
+            title = ?,
+            summary = ?
+        WHERE id = ?
+    """, (new_count, new_esc, cat_to_save, confidence, now_iso, update_title, update_summary, conversation_id))
+
+    conn.commit()
+    conn.close()
+
+def get_conversations_by_chatbot(
+    chatbot_id: str,
+    category: Optional[str] = None,
+    escalated_only: bool = False,
+    search: Optional[str] = None,
+    limit: int = 100
+) -> List[Dict[str, Any]]:
+    conn = get_db()
+    cursor = conn.cursor()
+
+    query = "SELECT * FROM conversations WHERE chatbot_id = ?"
+    params: List[Any] = [chatbot_id]
+
+    if category and category != "all":
+        if category == "escalated":
+            query += " AND need_escalation = 1"
+        else:
+            query += " AND category = ?"
+            params.append(category)
+
+    if escalated_only and category != "escalated":
+        query += " AND need_escalation = 1"
+
+    if search and search.strip():
+        query += " AND (title LIKE ? OR summary LIKE ?)"
+        params.extend([f"%{search.strip()}%", f"%{search.strip()}%"])
+
+    query += " ORDER BY updated_at DESC LIMIT ?"
+    params.append(limit)
+
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def get_conversation_with_messages(conversation_id: str) -> Optional[Dict[str, Any]]:
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM conversations WHERE id = ?", (conversation_id,))
+    conv_row = cursor.fetchone()
+    if not conv_row:
+        conn.close()
+        return None
+
+    conv = dict(conv_row)
+
+    cursor.execute("SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at ASC", (conversation_id,))
+    msg_rows = cursor.fetchall()
+    conn.close()
+
+    conv["messages"] = [dict(r) for r in msg_rows]
+    return conv
+
+def get_chatbot_conversation_stats(chatbot_id: str) -> Dict[str, Any]:
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT COUNT(*) FROM conversations WHERE chatbot_id = ?", (chatbot_id,))
+    total = cursor.fetchone()[0]
+
+    today = datetime.utcnow().date().isoformat()
+    cursor.execute("""
+        SELECT COUNT(*) FROM conversations
+        WHERE chatbot_id = ? AND (updated_at LIKE ? OR started_at LIKE ?)
+    """, (chatbot_id, f"{today}%", f"{today}%"))
+    today_cnt = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM conversations WHERE chatbot_id = ? AND category = 'refund'", (chatbot_id,))
+    refund_cnt = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM conversations WHERE chatbot_id = ? AND category = 'complaint'", (chatbot_id,))
+    complaint_cnt = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM conversations WHERE chatbot_id = ? AND need_escalation = 1", (chatbot_id,))
+    escalations = cursor.fetchone()[0]
+
+    cursor.execute("""
+        SELECT category, COUNT(*) as cnt FROM conversations
+        WHERE chatbot_id = ?
+        GROUP BY category ORDER BY cnt DESC LIMIT 1
+    """, (chatbot_id,))
+    top_cat_row = cursor.fetchone()
+    most_asked_category = top_cat_row["category"].replace("_", " ").title() if top_cat_row and top_cat_row["category"] else "General Inquiry"
+
+    cursor.execute("SELECT AVG(total_messages) FROM conversations WHERE chatbot_id = ?", (chatbot_id,))
+    avg_msgs = cursor.fetchone()[0] or 0.0
+
+    conn.close()
+    return {
+        "total_conversations": total,
+        "today_conversations": today_cnt,
+        "refund_requests": refund_cnt,
+        "complaints": complaint_cnt,
+        "human_escalations": escalations,
+        "most_asked_category": most_asked_category,
+        "avg_messages": round(avg_msgs, 1)
+    }
+
+def get_dashboard_stats(user_id: str) -> Dict[str, Any]:
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT COUNT(*) FROM chatbots WHERE user_id = ?", (user_id,))
+    total_bots = cursor.fetchone()[0]
+
+    cursor.execute("""
+        SELECT COUNT(*) FROM conversations
+        WHERE chatbot_id IN (SELECT id FROM chatbots WHERE user_id = ?)
+    """, (user_id,))
+    total_conversations = cursor.fetchone()[0]
+
+    cursor.execute("""
+        SELECT COUNT(*) FROM conversations
+        WHERE chatbot_id IN (SELECT id FROM chatbots WHERE user_id = ?)
+        AND need_escalation = 1
+    """, (user_id,))
+    total_escalations = cursor.fetchone()[0]
+
+    today = datetime.utcnow().date().isoformat()
+    cursor.execute("""
+        SELECT COUNT(*) FROM conversations
+        WHERE chatbot_id IN (SELECT id FROM chatbots WHERE user_id = ?)
+        AND (updated_at LIKE ? OR started_at LIKE ?)
+    """, (user_id, f"{today}%", f"{today}%"))
+    active_today = cursor.fetchone()[0]
+
+    cursor.execute("""
+        SELECT AVG(total_messages) FROM conversations
+        WHERE chatbot_id IN (SELECT id FROM chatbots WHERE user_id = ?)
+    """, (user_id,))
+    avg_msgs = cursor.fetchone()[0] or 0.0
+
+    cursor.execute("""
+        SELECT category, COUNT(*) as cnt FROM conversations
+        WHERE chatbot_id IN (SELECT id FROM chatbots WHERE user_id = ?)
+        GROUP BY category ORDER BY cnt DESC LIMIT 1
+    """, (user_id,))
+    top_cat_row = cursor.fetchone()
+    most_asked_category = top_cat_row["category"].replace("_", " ").title() if top_cat_row and top_cat_row["category"] else "General Inquiry"
+
+    cursor.execute("""
+        SELECT c.*, cb.chatbot_name, cb.company_name
+        FROM conversations c
+        JOIN chatbots cb ON c.chatbot_id = cb.id
+        WHERE cb.user_id = ?
+        ORDER BY c.updated_at DESC
+        LIMIT 10
+    """, (user_id,))
+    recent_chats = [dict(r) for r in cursor.fetchall()]
+
+    conn.close()
+    return {
+        "total_bots": total_bots,
+        "total_conversations": total_conversations,
+        "total_escalations": total_escalations,
+        "active_today": active_today,
+        "avg_messages_per_conversation": round(avg_msgs, 1),
+        "most_asked_category": most_asked_category,
+        "recent_chats": recent_chats
+    }
+
+# ── Leads CRUD ───────────────────────────────────────────────────────────────────
+
+def save_lead(chatbot_id: str, name: str, email: str, phone: str = "", notes: str = "") -> str:
+    lead_id = str(uuid.uuid4())[:8]
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO leads (id, chatbot_id, name, email, phone, notes, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (lead_id, chatbot_id, name, email, phone, notes, datetime.utcnow().isoformat()))
+    conn.commit()
+    conn.close()
+    return lead_id
+
+def get_leads(chatbot_id: str) -> List[Dict[str, Any]]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM leads WHERE chatbot_id = ? ORDER BY created_at DESC", (chatbot_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]

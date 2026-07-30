@@ -114,3 +114,12 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #4a5c6a;
 }
+
+/* ── Embed iframe transparency override ─────────────────────────────────────── */
+/* Applied when body has data-embed="true" (set by EmbedLayout) */
+body[data-embed="true"],
+body[data-embed="true"] + *,
+html:has(body[data-embed="true"]) {
+  background: transparent !important;
+  background-color: transparent !important;
+}

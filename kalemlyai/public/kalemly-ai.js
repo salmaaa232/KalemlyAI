@@ -25,8 +25,11 @@
     iframe.style.height = '680px';
     iframe.style.border = 'none';
     iframe.style.background = 'transparent';
+    iframe.style.backgroundColor = 'transparent';
     iframe.style.colorScheme = 'normal';
     iframe.style.pointerEvents = 'auto';
+    iframe.allowTransparency = 'true';
+    iframe.setAttribute('allowtransparency', 'true');
 
     container.appendChild(iframe);
     document.body.appendChild(container);

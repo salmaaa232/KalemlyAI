@@ -295,10 +295,13 @@ export default function PublicChatPage() {
 
           {isThinking && (
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-xl bg-[#253745] text-[#9ba8ab] flex items-center justify-center">
-                <Bot className="w-4 h-4" />
+              <div
+                className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+                style={{ backgroundColor: primary }}
+              >
+                <Bot className="w-4 h-4 text-white" />
               </div>
-              <ThinkingAnimation />
+              <ThinkingAnimation themeMode={botConfig?.theme_mode || "dark"} primaryColor={primary} />
             </div>
           )}
           <div ref={messagesEndRef} />

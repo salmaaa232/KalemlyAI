@@ -156,7 +156,24 @@ export default function EmbedWidgetPage() {
   const primary = botConfig?.primary_color || "#253745";
 
   return (
-    <div className="fixed bottom-0 right-0 p-4 z-50 font-sans flex flex-col items-end bg-transparent pointer-events-none">
+    <div
+      style={{
+        position: "fixed",
+        bottom: 0,
+        right: 0,
+        zIndex: 2147483647,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "flex-end",
+        padding: "16px",
+        background: "transparent",
+        pointerEvents: "none",
+        margin: 0,
+        border: "none",
+        boxShadow: "none",
+        outline: "none",
+      }}
+    >
       {/* Floating Widget Drawer Window */}
       {isOpen && (
         <div
@@ -228,7 +245,7 @@ export default function EmbedWidgetPage() {
 
             {isThinking && (
               <div className="flex items-start gap-2">
-                <ThinkingAnimation />
+                <ThinkingAnimation themeMode={botConfig?.theme_mode || "dark"} primaryColor={primary} />
               </div>
             )}
             <div ref={messagesEndRef} />

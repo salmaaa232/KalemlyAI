@@ -273,6 +273,30 @@ def delete_chatbot_endpoint(chatbot_id: str, current_user: Dict = Depends(requir
     delete_chatbot(chatbot_id)
     return {"success": True, "message": "Chatbot deleted."}
 
+# ── Leads / Support Ticket Endpoints ─────────────────────────────────────────────
+
+@app.post("/api/chatbots/{chatbot_id}/leads")
+def create_lead_endpoint(chatbot_id: str, lead: LeadRequest):
+    try:
+        lead_id = save_lead(
+            chatbot_id=chatbot_id,
+            name=lead.name,
+            email=lead.email,
+            phone=lead.phone or "",
+            notes=lead.notes or ""
+        )
+        return {"success": True, "lead_id": lead_id, "message": "Support ticket submitted successfully!"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/chatbots/{chatbot_id}/leads")
+def get_leads_endpoint(chatbot_id: str, current_user: Dict = Depends(require_current_user)):
+    try:
+        leads = get_leads(chatbot_id)
+        return {"success": True, "leads": leads}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ════════════════════════════════════════════════════════════════════════════════
 # CHAT ENDPOINT (Conversation-Based Grouping with 30-min Inactivity Expiry)
 # ════════════════════════════════════════════════════════════════════════════════
